@@ -1,0 +1,15 @@
+{
+  "saldo_minimo": 6000000,
+  "horizonte_semanas": 13,
+  "janela_curvas_dias": 240,
+  "janela_vendas_dias_uteis": 40,
+  "recorrentes": [
+    {"categoria": "Folha", "regra": "dia_util", "dia": 5},
+    {"categoria": "Encargos", "regra": "dia", "dia": 20, "ajuste": "seguinte"},
+    {"categoria": "Aluguel e serviços", "regra": "dia", "dia": 10, "ajuste": "seguinte"},
+    {"categoria": "Empréstimo", "regra": "dia", "dia": 15, "ajuste": "seguinte", "meses": [3, 6, 9, 12]},
+    {"categoria": "13º salário", "regra": "dia", "dia": 30, "ajuste": "anterior", "meses": [11], "base": "Folha", "fator": 0.5},
+    {"categoria": "13º salário", "regra": "dia", "dia": 20, "ajuste": "anterior", "meses": [12], "base": "Folha", "fator": 0.5}
+  ],
+  "impostos": {"categoria": "Impostos", "dia": 25, "ajuste": "seguinte"}
+}

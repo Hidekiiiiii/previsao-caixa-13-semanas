@@ -1,0 +1,41 @@
+cliente,segmento,prazo_dias
+PUB-01,Hospital público,30
+PUB-02,Hospital público,30
+PUB-03,Hospital público,30
+PUB-04,Hospital público,30
+PUB-05,Hospital público,30
+PUB-06,Hospital público,30
+PUB-07,Hospital público,30
+PUB-08,Hospital público,30
+PRIV-01,Hospital privado,60
+PRIV-02,Hospital privado,60
+PRIV-03,Hospital privado,45
+PRIV-04,Hospital privado,60
+PRIV-05,Hospital privado,60
+PRIV-06,Hospital privado,60
+PRIV-07,Hospital privado,60
+PRIV-08,Hospital privado,45
+PRIV-09,Hospital privado,60
+PRIV-10,Hospital privado,45
+PRIV-11,Hospital privado,60
+PRIV-12,Hospital privado,60
+PRIV-13,Hospital privado,45
+PRIV-14,Hospital privado,45
+CLIN-01,Clínica,28
+CLIN-02,Clínica,28
+CLIN-03,Clínica,28
+CLIN-04,Clínica,28
+CLIN-05,Clínica,28
+CLIN-06,Clínica,28
+CLIN-07,Clínica,28
+CLIN-08,Clínica,28
+CLIN-09,Clínica,28
+CLIN-10,Clínica,28
+CLIN-11,Clínica,28
+CLIN-12,Clínica,28
+DIST-01,Distribuidor,60
+DIST-02,Distribuidor,60
+DIST-03,Distribuidor,60
+DIST-04,Distribuidor,60
+DIST-05,Distribuidor,60
+DIST-06,Distribuidor,60
