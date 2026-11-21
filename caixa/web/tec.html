@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Previsão de caixa · terminal</title>
+<style>
+@font-face { font-family: "Inter"; src: url("/web/fontes/inter-latin-wght.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/web/fontes/jetbrains-mono-latin-wght.woff2") format("woff2"); font-weight: 100 800; font-display: swap; }
+
+:root {
+  --fundo: #07090d; --painel: rgba(17, 21, 29, .78); --borda: #1e2633; --borda-2: #2b3647;
+  --texto: #e8edf5; --texto-2: #a4afc0; --texto-3: #7b879b;
+  --s1: #3987e5; --s2: #ff7a3d; --ciano: #5ee0d0; --ok: #4cc38a; --critico: #ff6b7d;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; color: var(--texto); font: 400 15px/1.55 Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(57, 135, 229, .16), transparent 60%),
+    radial-gradient(700px 420px at -10% 30%, rgba(94, 224, 208, .08), transparent 60%),
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) 0 0 / 32px 32px,
+    var(--fundo);
+  -webkit-font-smoothing: antialiased;
+}
+.pagina { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; }
+
+/* barra de terminal */
+.barra { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border: 1px solid var(--borda); border-radius: 12px; background: var(--painel); backdrop-filter: blur(8px); font: 500 13px var(--mono); }
+.luzes { display: flex; gap: 6px; }
+.luzes i { width: 10px; height: 10px; border-radius: 50%; background: var(--borda-2); }
+.prompt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto-2); }
+.prompt .u { color: var(--ciano); }
+.prompt .c { color: var(--texto); }
+.cursor { display: inline-block; width: 8px; height: 15px; vertical-align: -2px; background: var(--ciano); animation: pisca 1s steps(1) infinite; }
+@keyframes pisca { 50% { opacity: 0; } }
+.vivo { display: flex; align-items: center; gap: 8px; color: var(--texto-3); font-size: 12px; }
+.vivo i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(76,195,138,.6); animation: pulso 2s infinite; }
+.vivo.calc i { background: var(--ciano); animation-duration: .7s; }
+@keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(76,195,138,.55); } 70% { box-shadow: 0 0 0 9px rgba(76,195,138,0); } 100% { box-shadow: 0 0 0 0 rgba(76,195,138,0); } }
+
+.titulo { margin: 30px 0 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.titulo h1 { margin: 0; font-size: clamp(30px, 4.6vw, 48px); font-weight: 700; letter-spacing: -0.035em; line-height: 1.05;
+  background: linear-gradient(90deg, #fff 30%, #9fc3f5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.titulo p { margin: 8px 0 0; color: var(--texto-2); max-width: 640px; }
+.campo { display: flex; flex-direction: column; gap: 6px; font: 500 11px var(--mono); color: var(--texto-3); letter-spacing: .08em; text-transform: uppercase; }
+input[type=date] { font: 500 14px var(--mono); color: var(--texto); background: var(--painel); border: 1px solid var(--borda-2); border-radius: 10px; padding: 9px 12px; }
+
+.status { margin-top: 22px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid; font: 500 13.5px var(--mono); transition: border-color .3s, background .3s; }
+.status.ok { border-color: rgba(76,195,138,.35); background: rgba(76,195,138,.07); }
+.status.critico { border-color: rgba(255,107,125,.45); background: rgba(255,107,125,.08); }
+.status .tag { padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11.5px; letter-spacing: .06em; }
+.status.ok .tag { background: rgba(76,195,138,.18); color: var(--ok); }
+.status.critico .tag { background: rgba(255,107,125,.2); color: var(--critico); }
+
+.kpis { margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi { position: relative; padding: 16px 16px 14px; border: 1px solid var(--borda); border-radius: 14px; background: var(--painel); overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(94,224,208,.6), transparent); transform: translateX(-100%); animation: varre 3.5s ease-in-out infinite; }
+.kpi:nth-child(2)::before { animation-delay: .4s; } .kpi:nth-child(3)::before { animation-delay: .8s; } .kpi:nth-child(4)::before { animation-delay: 1.2s; }
+@keyframes varre { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(100%); } }
+.kpi .nome { font: 500 11px var(--mono); color: var(--texto-3); letter-spacing: .08em; text-transform: uppercase; }
+.kpi .valor { margin-top: 8px; font: 700 27px/1 var(--mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.kpi .nota { margin-top: 8px; font-size: 12.5px; color: var(--texto-2); min-height: 1.3em; }
+.kpi .delta { font-family: var(--mono); color: var(--critico); }
+
+.grade { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; }
+.painel { position: relative; border: 1px solid var(--borda); border-radius: 16px; background: var(--painel); padding: 18px 20px; }
+.painel h2 { margin: 0; font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--texto-2); }
+.painel h2 b { color: var(--ciano); font-weight: 600; }
+.painel .explica { margin: 4px 0 0; font-size: 13px; color: var(--texto-3); }
+.cantos::after { content: ""; position: absolute; inset: -1px; border-radius: 16px; pointer-events: none;
+  background: linear-gradient(var(--ciano), var(--ciano)) top left / 14px 1px no-repeat, linear-gradient(var(--ciano), var(--ciano)) top left / 1px 14px no-repeat,
+              linear-gradient(var(--ciano), var(--ciano)) bottom right / 14px 1px no-repeat, linear-gradient(var(--ciano), var(--ciano)) bottom right / 1px 14px no-repeat; opacity: .7; }
+
+.legenda { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font: 12px var(--mono); color: var(--texto-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 7px; }
+.legenda i { width: 16px; border-top: 2px solid; }
+.legenda .tr { border-top-style: dashed; }
+.cartao-grafico { display: flex; flex-direction: column; }
+.grafico { position: relative; flex: 1; min-height: 340px; margin-top: 6px; }
+.grafico svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.grafico text { font: 11.5px var(--mono); fill: var(--texto-3); }
+.grafico .rs { font-size: 12px; fill: var(--texto-2); }
+.dica { position: absolute; top: 8px; pointer-events: none; min-width: 200px; padding: 10px 12px; border: 1px solid var(--borda-2); border-radius: 10px; background: rgba(10,13,19,.94); font: 12.5px var(--mono); opacity: 0; transition: opacity .12s; }
+.dica .t { color: var(--ciano); margin-bottom: 5px; }
+.dica .l { display: flex; justify-content: space-between; gap: 14px; color: var(--texto-2); }
+.dica .l b { color: var(--texto); }
+.dica .m { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+
+.seg { padding: 13px 0; border-top: 1px dashed var(--borda-2); }
+.seg:first-of-type { margin-top: 12px; }
+.seg-topo { display: flex; justify-content: space-between; align-items: baseline; }
+.seg-nome { font-weight: 500; }
+.seg-valor { font: 700 14px var(--mono); color: var(--s2); min-width: 64px; text-align: right; }
+.seg-valor.zero { color: var(--texto-3); }
+.seg-folga { margin-top: 2px; font: 11.5px var(--mono); color: var(--texto-3); }
+.seg-folga.passou { color: var(--critico); }
+.trilho { position: relative; height: 18px; margin-top: 10px; }
+.medidor { position: absolute; left: 8px; right: 8px; top: 7px; height: 4px; border-radius: 4px; background: var(--borda-2); }
+.medidor .enchido { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: linear-gradient(90deg, var(--ciano), var(--s2)); transition: width .15s; }
+.medidor .limite { position: absolute; top: -5px; width: 2px; height: 14px; background: var(--critico); border-radius: 2px; opacity: .9; }
+input[type=range] { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 18px; margin: 0; background: transparent; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--texto); border: 3px solid var(--s2); box-shadow: 0 0 12px rgba(255,122,61,.6); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--texto); border: 3px solid var(--s2); }
+input[type=range]::-webkit-slider-runnable-track { background: transparent; height: 18px; display: flex; align-items: center; }
+input[type=range]::-moz-range-track { background: transparent; }
+input[type=range]:focus-visible { outline: 2px solid var(--ciano); outline-offset: 4px; border-radius: 4px; }
+.zerar { margin-top: 14px; width: 100%; padding: 9px; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--texto); background: transparent; border: 1px solid var(--borda-2); border-radius: 10px; cursor: pointer; transition: border-color .2s, color .2s; }
+.zerar:hover:not(:disabled) { border-color: var(--ciano); color: var(--ciano); }
+.zerar:disabled { opacity: .35; cursor: default; }
+
+.tabela { margin-top: 12px; }
+.rolagem { overflow-x: auto; margin: 12px -20px 0; padding: 0 20px; }
+table { border-collapse: collapse; width: 100%; min-width: 980px; font: 12.5px var(--mono); }
+th, td { padding: 6px 8px; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: #0f131a; font-family: Inter, sans-serif; }
+thead th { color: var(--texto-3); font-weight: 500; border-bottom: 1px solid var(--borda-2); }
+thead th small { display: block; font-size: 10.5px; color: var(--texto-3); }
+td { color: var(--texto-2); }
+td.z { color: #4a5568; }
+tr.total td { color: var(--texto); font-weight: 600; border-top: 1px solid var(--borda-2); }
+td.baixo { color: var(--critico); background: rgba(255,107,125,.1); }
+tbody tr { opacity: 0; transform: translateY(4px); animation: entra .35s ease forwards; }
+@keyframes entra { to { opacity: 1; transform: none; } }
+
+.rodape { margin-top: 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font: 12px var(--mono); color: var(--texto-3); }
+.rodape a { color: var(--ciano); text-decoration: none; }
+
+@media (max-width: 940px) { .grade { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) {
+  .pagina { padding: 16px 16px 36px; }
+  .kpi .valor { font-size: 20px; }
+  .painel { padding: 16px; }
+  .rolagem { margin: 12px -16px 0; padding: 0 16px; }
+  .grafico { min-height: 280px; }
+  .vivo span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  tbody tr { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<main class="pagina">
+  <div class="barra">
+    <div class="luzes" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="prompt" id="prompt" aria-hidden="true"></div>
+    <div class="vivo" id="vivo"><i></i><span id="vivo-t">conectado</span></div>
+  </div>
+
+  <div class="titulo">
+    <div>
+      <h1>Previsão de caixa · 13 semanas</h1>
+      <p>Grupo Atlas (dados fictícios). Curvas de recebimento por segmento, regras de calendário e simulação de atraso em tempo real.</p>
+    </div>
+    <label class="campo">data-base<input type="date" id="data-base"></label>
+  </div>
+
+  <div class="status ok" id="status" role="status"><span class="tag">OK</span><span id="status-t">calculando…</span></div>
+
+  <section class="kpis">
+    <div class="kpi"><div class="nome">saldo_atual</div><div class="valor" id="k1">R$ 0,0 mi</div><div class="nota" id="k1n"></div></div>
+    <div class="kpi"><div class="nome">menor_saldo</div><div class="valor" id="k2">R$ 0,0 mi</div><div class="nota" id="k2n"></div></div>
+    <div class="kpi"><div class="nome">saldo_s13</div><div class="valor" id="k3">R$ 0,0 mi</div><div class="nota" id="k3n"></div></div>
+    <div class="kpi"><div class="nome">fora_do_horizonte</div><div class="valor" id="k4">R$ 0,0 mi</div><div class="nota">carteira vencida há muito ou perda provável</div></div>
+  </section>
+
+  <section class="grade">
+    <div class="painel cantos cartao-grafico">
+      <h2><b>&gt;</b> saldo no fim de cada semana</h2>
+      <p class="explica">Passe o mouse sobre o gráfico. Linha tracejada = caixa mínimo.</p>
+      <div class="legenda" id="legenda"></div>
+      <div class="grafico"><svg id="svg" role="img" aria-label="Saldo projetado por semana"></svg><div class="dica" id="dica"></div></div>
+    </div>
+    <aside class="painel">
+      <h2><b>&gt;</b> simular atraso</h2>
+      <p class="explica">Dias a mais por segmento. A marca vermelha é a folga: até onde o caixa aguenta.</p>
+      <div id="segs"></div>
+      <button class="zerar" id="zerar" type="button" disabled>reset cenário</button>
+    </aside>
+  </section>
+
+  <section class="painel tabela">
+    <h2 id="titulo-tabela"><b>&gt;</b> fluxo por semana · R$ mil</h2>
+    <div class="rolagem"><table id="tabela"></table></div>
+  </section>
+
+  <footer class="rodape">
+    <span>método direto · Kaplan-Meier por segmento · backtest em 31 datas</span>
+    <span><a href="/classica">versão clássica</a> · <a href="/docs">/docs</a> · <a href="/previsao">/previsao</a></span>
+  </footer>
+</main>
+
+<script>
+const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const f1 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const f0 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+const mi = v => `R$ ${f1.format(v / 1e6)} mi`;
+const dBR = s => s.split("-").reverse().slice(0, 2).join("/");
+const $ = s => document.querySelector(s);
+const suave = t => 1 - Math.pow(1 - t, 3);
+const est = { info: null, folga: {}, atraso: {}, base: null, cen: null, n: 0, desenhadoY: null, valores: {} };
+
+async function pegar(url, o) { const r = await fetch(url, o); const j = await r.json(); if (!r.ok) throw new Error(j.detail || r.statusText); return j; }
+const ativo = () => Object.values(est.atraso).some(d => d > 0);
+
+// ---------- terminal ----------
+let digitando = 0;
+function digitar(cmd) {
+  const id = ++digitando, el = $("#prompt");
+  const pre = '<span class="u">atlas@caixa</span>:~$ ';
+  if (reduz) { el.innerHTML = pre + `<span class="c">${cmd}</span><span class="cursor"></span>`; return; }
+  let i = 0;
+  (function passo() {
+    if (id !== digitando) return;
+    el.innerHTML = pre + `<span class="c">${cmd.slice(0, i)}</span><span class="cursor"></span>`;
+    if (i++ < cmd.length) setTimeout(passo, 18);
+  })();
+}
+function vivo(calc) { $("#vivo").classList.toggle("calc", calc); $("#vivo-t").textContent = calc ? "calculando" : "conectado"; }
+
+// ---------- números que contam ----------
+function contar(id, alvo) {
+  const el = $(id), de = est.valores[id] ?? 0;
+  est.valores[id] = alvo;
+  if (reduz) { el.textContent = mi(alvo); return; }
+  const t0 = performance.now(), dur = 900;
+  (function q(t) {
+    const k = Math.min(1, (t - t0) / dur);
+    el.textContent = mi(de + (alvo - de) * suave(k));
+    if (k < 1) requestAnimationFrame(q);
+  })(t0);
+}
+
+async function carregar() {
+  const n = ++est.n, data = est.data;
+  vivo(true);
+  const atraso = Object.fromEntries(Object.entries(est.atraso).filter(([, d]) => d > 0));
+  digitar(ativo() ? `simular --data-base ${data} ${Object.entries(atraso).map(([s, d]) => `--"${s}" +${d}d`).join(" ")}`
+                  : `prever --data-base ${data}`);
+  try {
+    if (ativo()) {
+      const r = await pegar("/cenario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data_base: data, atraso_extra: atraso }) });
+      if (n !== est.n) return; est.base = r.base; est.cen = r.cenario;
+    } else {
+      const r = await pegar(`/previsao?data_base=${data}`);
+      if (n !== est.n) return; est.base = r; est.cen = null;
+    }
+    desenhar();
+  } catch (e) { status("critico", "ERRO", e.message); }
+  finally { if (n === est.n) vivo(false); }
+}
+
+async function carregarFolga() {
+  const data = est.data; est.folga = {}; segmentos();
+  try { (await pegar(`/folga?data_base=${data}`)).forEach(x => est.folga[x.segmento] = x.folga_dias); } catch (e) {}
+  if (data === est.data) segmentos();
+}
+
+function status(tipo, tag, txt) { const s = $("#status"); s.className = `status ${tipo}`; s.querySelector(".tag").textContent = tag; $("#status-t").textContent = txt; }
+
+function desenhar() {
+  const p = est.cen || est.base, menor = p.semanas[p.semana_do_menor_saldo - 1], s13 = p.semanas[12];
+  contar("#k1", p.saldo_atual); $("#k1n").textContent = `em ${p.data_base.split("-").reverse().join("/")}`;
+  contar("#k2", p.menor_saldo); $("#k2n").textContent = `S${menor.semana} · ${dBR(menor.inicio)}–${dBR(menor.fim)}`;
+  contar("#k3", s13.saldo_final);
+  const dif = est.cen ? s13.saldo_final - est.base.semanas[12].saldo_final : 0;
+  $("#k3n").innerHTML = est.cen ? `<span class="delta">−${f1.format(Math.abs(dif) / 1e6)} mi</span> vs. cenário base` : `até ${dBR(s13.fim)}`;
+  contar("#k4", p.carteira_nao_recebida_no_horizonte);
+  if (p.alertas.length) {
+    const pior = Math.max(...p.alertas.map(a => a.falta_para_minimo));
+    status("critico", "ALERTA", `${p.alertas.length} semana${p.alertas.length > 1 ? "s" : ""} abaixo do mínimo de ${mi(p.saldo_minimo)} · primeira em ${dBR(p.alertas[0].inicio)} · pior falta: ${mi(pior)}`);
+  } else {
+    status("ok", "OK", `caixa acima do mínimo de ${mi(p.saldo_minimo)} nas 13 semanas · ponto mais baixo ${mi(p.menor_saldo)} em ${dBR(menor.inicio)}`);
+  }
+  $("#zerar").disabled = !ativo();
+  grafico();
+  tabela(p);
+  segmentos();
+}
+
+// ---------- gráfico ----------
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+let anim = 0;
+function grafico(semAnimar) {
+  const svg = $("#svg"), b = est.base, c = est.cen;
+  const L = svg.clientWidth || 700, A = svg.clientHeight || 340, estreito = L < 520;
+  const m = { e: 42, d: estreito ? 12 : 108, t: 18, b: 28 };
+  const ys = p => [p.saldo_atual, ...p.semanas.map(s => s.saldo_final)];
+  const yb = ys(b), yc = c ? ys(c) : yb;
+  const yMax = Math.max(...yb, ...yc, b.saldo_minimo) * 1.14, yMin = Math.min(0, ...yc);
+  const X = i => m.e + i / 13 * (L - m.e - m.d), Y = v => m.t + (1 - (v - yMin) / (yMax - yMin)) * (A - m.t - m.b);
+  const primeira = !est.desenhadoY;
+  const deC = est.desenhadoY || yb.map(() => b.saldo_minimo);
+  const id = ++anim;
+  const fundo = () => {
+    let h = `<defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css("--s1")}" stop-opacity=".28"/><stop offset="1" stop-color="${css("--s1")}" stop-opacity="0"/></linearGradient>
+      <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${css("--s2")}" stop-opacity=".22"/><stop offset="1" stop-color="${css("--s2")}" stop-opacity="0"/></linearGradient>
+      <filter id="brilho" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+    const passo = yMax > 16e6 ? 4e6 : 2e6;
+    for (let v = 0; v <= yMax; v += passo) h += `<line x1="${m.e}" x2="${L - m.d}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--borda")}"/><text x="${m.e - 8}" y="${Y(v) + 4}" text-anchor="end">${v / 1e6}</text>`;
+    h += `<text x="${m.e - 8}" y="${m.t - 6}" text-anchor="end">R$ mi</text>`;
+    (estreito ? [0, 4, 8, 12] : [0, 2, 4, 6, 8, 10, 12]).forEach(i => h += `<text x="${X(i)}" y="${A - 6}" text-anchor="middle">${i ? dBR(b.semanas[i - 1].fim) : "hoje"}</text>`);
+    const yMin_ = Y(b.saldo_minimo);
+    h += `<rect x="${m.e}" y="${yMin_}" width="${L - m.e - m.d}" height="${Math.max(0, Y(Math.max(yMin, 0)) - yMin_)}" fill="${css("--critico")}" opacity=".05"/>`;
+    h += `<line x1="${m.e}" x2="${L - m.d}" y1="${yMin_}" y2="${yMin_}" stroke="${css("--critico")}" stroke-dasharray="5 4" opacity=".75"/>`;
+    if (!estreito) h += `<text class="rs" x="${L - m.d + 8}" y="${yMin_ + 4}" style="fill:${css("--critico")}">MÍNIMO</text>`;
+    return h;
+  };
+  const linha = (vals, cor, grad, prog) => {
+    const pts = vals.map((v, i) => [X(i), Y(v)]);
+    const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const area = d + ` L ${X(13)} ${Y(Math.max(yMin, 0))} L ${X(0)} ${Y(Math.max(yMin, 0))} Z`;
+    let h = grad ? `<path d="${area}" fill="url(#${grad})" opacity="${prog}"/>` : "";
+    h += `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2.2" stroke-linejoin="round" filter="url(#brilho)" pathLength="1" stroke-dasharray="1" stroke-dashoffset="${1 - prog}"/>`;
+    pts.forEach((p, i) => {
+      if (i / 13 > prog + 1e-6) return;
+      const baixo = vals[i] < b.saldo_minimo;
+      h += `<circle cx="${p[0]}" cy="${p[1]}" r="${baixo ? 5 : 3.6}" fill="${baixo ? "#07090d" : cor}" stroke="${baixo ? css("--critico") : "#07090d"}" stroke-width="2"/>`;
+    });
+    return h;
+  };
+  const quadro = (k) => {
+    if (id !== anim) return;
+    const prog = primeira ? k : 1;
+    const atual = c ? yc.map((v, i) => deC[i] + (v - deC[i]) * (primeira ? 1 : k)) : null;
+    let h = fundo() + linha(yb, css("--s1"), c ? null : "gA", prog);   // com cenário, só a área laranja
+    if (c) h += linha(atual, css("--s2"), "gB", prog);
+    if (!estreito && prog === 1) {
+      const fim = [{ y: Y(yb[13]), t: "previsão" }]; if (c) fim.push({ y: Y(atual[13]), t: "com atraso" });
+      fim.sort((a, b) => a.y - b.y); if (fim.length === 2 && fim[1].y - fim[0].y < 16) { fim[0].y -= 8; fim[1].y += 8; }
+      fim.forEach(f => h += `<text class="rs" x="${L - m.d + 8}" y="${f.y + 4}">${f.t}</text>`);
+    }
+    h += `<line id="mira" y1="${m.t}" y2="${A - m.b}" stroke="${css("--ciano")}" stroke-width="1" opacity="0"/><circle id="ponto" r="6" fill="none" stroke="${css("--ciano")}" stroke-width="2" opacity="0"/>`;
+    h += `<rect id="alvo" x="${m.e}" y="0" width="${L - m.e - m.d}" height="${A}" fill="transparent"/>`;
+    svg.setAttribute("viewBox", `0 0 ${L} ${A}`); svg.innerHTML = h;
+    if (k === 1) interacao(X, Y, m, L, c ? yc : null, yb);
+  };
+  est.desenhadoY = c ? yc : yb;
+  $("#legenda").innerHTML = `<span><i style="border-color:${css("--s1")}"></i>previsão</span>` + (c ? `<span><i style="border-color:${css("--s2")}"></i>com atraso</span>` : "") + `<span><i class="tr" style="border-color:${css("--critico")}"></i>caixa mínimo</span>`;
+  if (reduz || semAnimar || (!primeira && !c && !deC)) return quadro(1);
+  const t0 = performance.now(), dur = primeira ? 1300 : 550;
+  (function q(t) { const k = Math.min(1, (t - t0) / dur); quadro(suave(k)); if (k < 1) requestAnimationFrame(q); })(t0);
+}
+
+function interacao(X, Y, m, L, yc, yb) {
+  const svg = $("#svg"), dica = $("#dica"), mira = $("#mira"), ponto = $("#ponto"), b = est.base;
+  const mover = ev => {
+    const r = svg.getBoundingClientRect(), cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+    const i = Math.max(0, Math.min(13, Math.round((cx - m.e) / (L - m.e - m.d) * 13)));
+    const yAlvo = yc ? yc[i] : yb[i];
+    mira.setAttribute("x1", X(i)); mira.setAttribute("x2", X(i)); mira.setAttribute("opacity", ".55");
+    ponto.setAttribute("cx", X(i)); ponto.setAttribute("cy", Y(yAlvo)); ponto.setAttribute("opacity", "1");
+    const tit = i ? `S${i} · ${dBR(b.semanas[i - 1].inicio)}–${dBR(b.semanas[i - 1].fim)}` : `hoje · ${dBR(b.data_base)}`;
+    dica.innerHTML = `<div class="t">${tit}</div><div class="l"><span><span class="m" style="background:${css("--s1")}"></span>previsão</span><b>${mi(yb[i])}</b></div>`
+      + (yc ? `<div class="l"><span><span class="m" style="background:${css("--s2")}"></span>com atraso</span><b>${mi(yc[i])}</b></div>` : "");
+    dica.style.left = `${X(i) + 220 > L ? X(i) - 216 : X(i) + 14}px`; dica.style.opacity = 1;
+  };
+  const sair = () => { dica.style.opacity = 0; mira.setAttribute("opacity", "0"); ponto.setAttribute("opacity", "0"); };
+  const alvo = $("#alvo");
+  alvo.addEventListener("mousemove", mover); alvo.addEventListener("touchmove", mover, { passive: true });
+  alvo.addEventListener("mouseleave", sair); alvo.addEventListener("touchend", sair);
+}
+
+// ---------- tabela ----------
+function tabela(p) {
+  $("#titulo-tabela").innerHTML = `<b>&gt;</b> fluxo por semana · R$ mil${est.cen ? " · com atraso simulado" : ""}`;
+  const ordem = ["Recebimentos – carteira", "Recebimentos – vendas futuras", "Fornecedores – títulos em aberto", "Fornecedores – compras futuras",
+                 "Folha", "Encargos", "13º salário", "Impostos", "Aluguel e serviços", "Empréstimo", "Despesas diversas"];
+  const linhas = Object.keys(p.semanas[0].linhas).filter(l => p.semanas.some(s => Math.abs(s.linhas[l]) >= 1))
+    .sort((a, b) => (ordem.indexOf(a) + 99) % 99 - (ordem.indexOf(b) + 99) % 99);
+  const k = v => Math.abs(v) < 500 ? "·" : f0.format(v / 1e3);
+  let h = "<thead><tr><th>linha</th>" + p.semanas.map(s => `<th>S${s.semana}<small>${dBR(s.inicio)}</small></th>`).join("") + "</tr></thead><tbody>";
+  const tr = (cls, nome, f, i) => `<tr class="${cls}" style="animation-delay:${i * 35}ms"><td>${nome}</td>${p.semanas.map(f).join("")}</tr>`;
+  let i = 0;
+  h += tr("total", "Saldo inicial", s => `<td>${k(s.saldo_inicial)}</td>`, i++);
+  linhas.forEach(l => h += tr("", l, s => `<td class="${Math.abs(s.linhas[l]) < 500 ? "z" : ""}">${k(s.linhas[l])}</td>`, i++));
+  h += tr("total", "Fluxo líquido", s => `<td>${k(s.fluxo_liquido)}</td>`, i++);
+  h += tr("total", "Saldo final", s => `<td class="${s.abaixo_do_minimo ? "baixo" : ""}">${k(s.saldo_final)}</td>`, i++);
+  $("#tabela").innerHTML = h + "</tbody>";
+}
+
+// ---------- segmentos ----------
+function segmentos() {
+  const caixa = $("#segs"), segs = est.info ? est.info.segmentos : [];
+  if (!caixa.children.length && segs.length) {
+    caixa.innerHTML = segs.map(s => `<div class="seg" data-seg="${s}">
+      <div class="seg-topo"><span class="seg-nome">${s}</span><span class="seg-valor zero">+0d</span></div>
+      <div class="seg-folga">calculando folga…</div>
+      <div class="trilho"><div class="medidor"><div class="enchido" style="width:0"></div></div>
+      <input type="range" min="0" max="60" value="0" aria-label="Dias de atraso a mais: ${s}"></div></div>`).join("");
+    caixa.querySelectorAll(".seg").forEach(el => {
+      const inp = el.querySelector("input"); let espera;
+      inp.addEventListener("input", () => { est.atraso[el.dataset.seg] = +inp.value; segmentos(); clearTimeout(espera); espera = setTimeout(carregar, 160); });
+    });
+  }
+  caixa.querySelectorAll(".seg").forEach(el => {
+    const s = el.dataset.seg, d = est.atraso[s] || 0, f = est.folga[s];
+    const v = el.querySelector(".seg-valor"); v.textContent = `+${d}d`; v.classList.toggle("zero", d === 0);
+    el.querySelector("input").value = d;
+    el.querySelector(".enchido").style.width = `${d / 60 * 100}%`;
+    let lim = el.querySelector(".limite");
+    if (f != null && f < 60) { if (!lim) { lim = document.createElement("div"); lim.className = "limite"; el.querySelector(".medidor").appendChild(lim); } lim.style.left = `calc(${f / 60 * 100}% - 1px)`; }
+    else if (lim) lim.remove();
+    const t = el.querySelector(".seg-folga"); t.classList.toggle("passou", f != null && d > f);
+    t.textContent = f === undefined ? "calculando folga…" : f === null ? "já fura sem atraso extra"
+      : f >= 120 ? "folga > 120d · sozinho não fura" : d > f ? `folga estourada · limite +${f}d` : `folga: +${f}d`;
+  });
+}
+
+$("#zerar").addEventListener("click", () => { est.atraso = {}; carregar(); });
+const dataValida = el => el.value && el.value >= el.min && el.value <= el.max;   // ignora a data enquanto é digitada
+$("#data-base").addEventListener("change", e => { if (!dataValida(e.target)) return; est.data = e.target.value; est.desenhadoY = null; carregar(); carregarFolga(); });
+let redim; addEventListener("resize", () => { clearTimeout(redim); redim = setTimeout(() => est.base && grafico(true), 120); });
+
+(async () => {
+  digitar("conectar --api /info");
+  est.info = await pegar("/info");
+  const d = $("#data-base"); d.min = est.info.data_base_minima; d.max = est.info.ultima_data_do_extrato; d.value = d.max; est.data = d.max;
+  // Cenário pelo endereço, para compartilhar: /?atraso=Hospital público:30
+  new URLSearchParams(location.search).getAll("atraso").forEach(par => {
+    const [seg, dias] = par.split(":");
+    if (est.info.segmentos.includes(seg) && +dias > 0) est.atraso[seg] = Math.min(60, +dias);
+  });
+  segmentos();
+  await carregar();
+  carregarFolga();
+})();
+</script>
+</body>
+</html>

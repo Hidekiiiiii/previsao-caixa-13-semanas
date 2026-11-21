@@ -173,7 +173,7 @@ td.zero { color: var(--texto-3); }
 
   <footer class="rodape">
     <span>Método direto com curvas de recebimento por segmento. Dados fictícios, gerados por script.</span>
-    <span><a href="/docs">Documentação da API</a> · <a href="/previsao">JSON da previsão</a></span>
+    <span><a href="/">Versão animada</a> · <a href="/docs">Documentação da API</a> · <a href="/previsao">JSON da previsão</a></span>
   </footer>
 </main>
 
@@ -197,7 +197,7 @@ function ativo() { return Object.values(estado.atraso).some(d => d > 0); }
 
 async function carregar() {
   const n = ++estado.pedido;
-  const data = $("#data-base").value;
+  const data = estado.data;
   document.body.classList.add("carregando");
   try {
     if (ativo()) {
@@ -220,12 +220,12 @@ async function carregar() {
 }
 
 async function carregarFolga() {
-  const data = $("#data-base").value;
+  const data = estado.data;
   estado.folga = {};
   desenharSegmentos();
   try {
     const f = await pegar(`/folga?data_base=${data}`);
-    if (data !== $("#data-base").value) return;
+    if (data !== estado.data) return;
     f.forEach(x => estado.folga[x.segmento] = x.folga_dias);
   } catch (e) { /* a folga é complementar; o resto da página continua */ }
   desenharSegmentos();
@@ -391,7 +391,8 @@ function desenharSegmentos() {
 }
 
 $("#zerar").addEventListener("click", () => { estado.atraso = {}; carregar(); });
-$("#data-base").addEventListener("change", () => { carregar(); carregarFolga(); });
+const dataValida = el => el.value && el.value >= el.min && el.value <= el.max;   // ignora a data enquanto é digitada
+$("#data-base").addEventListener("change", e => { if (!dataValida(e.target)) return; estado.data = e.target.value; carregar(); carregarFolga(); });
 let redim;
 window.addEventListener("resize", () => { clearTimeout(redim); redim = setTimeout(() => estado.base && desenharGrafico(), 120); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => estado.base && desenhar());
@@ -399,7 +400,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => esta
 (async () => {
   estado.info = await pegar("/info");
   const d = $("#data-base");
-  d.min = estado.info.data_base_minima; d.max = estado.info.ultima_data_do_extrato; d.value = d.max;
+  d.min = estado.info.data_base_minima; d.max = estado.info.ultima_data_do_extrato; d.value = d.max; estado.data = d.max;
   desenharSegmentos();
   await carregar();
   carregarFolga();

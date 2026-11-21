@@ -1,7 +1,8 @@
 """API da previsão de caixa (FastAPI).
 
     uvicorn caixa.api:app --reload
-    http://127.0.0.1:8000/      -> página com o saldo projetado e os cenários
+    http://127.0.0.1:8000/          -> página com o saldo projetado e os cenários
+    http://127.0.0.1:8000/classica  -> a mesma página em versão clara, sem animações
     http://127.0.0.1:8000/docs  -> documentação interativa das rotas
 
 A base é lida uma vez, na primeira chamada. Todas as respostas usam valores em reais.
@@ -163,7 +164,13 @@ app.mount("/web", StaticFiles(directory=WEB), name="web")
 
 @app.get("/", include_in_schema=False)
 def pagina() -> FileResponse:
-    """Página para quem não quer ler JSON: saldo projetado, cenários e tabela."""
+    """Página principal: saldo projetado, simulação de atraso e tabela, com visual de terminal."""
+    return FileResponse(WEB / "tec.html")
+
+
+@app.get("/classica", include_in_schema=False)
+def pagina_classica() -> FileResponse:
+    """A mesma página em versão clara e sóbria, sem animações."""
     return FileResponse(WEB / "index.html")
 
 

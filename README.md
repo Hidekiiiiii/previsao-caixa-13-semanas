@@ -76,17 +76,22 @@ A saída `saida/previsao_<data>.xlsx` tem 5 abas:
 - **Backtest.**
 - **Premissas.**
 
-## API
+## Página e API
 
-A mesma previsão também pode ser consultada por uma API em **FastAPI**. Um sistema de tesouraria ou um painel poderia consumi-la sem abrir a planilha.
+A mesma previsão também pode ser consultada por uma API em **FastAPI**, com uma página que a usa. Um sistema de tesouraria ou um painel poderia consumir a API sem abrir a planilha.
 
 ```bash
 uvicorn caixa.api:app
-# página:        http://127.0.0.1:8000/
-# documentação:  http://127.0.0.1:8000/docs
+# página:           http://127.0.0.1:8000/
+# versão clássica:  http://127.0.0.1:8000/classica
+# documentação:     http://127.0.0.1:8000/docs
 ```
 
-A página em `/` usa a própria API. Ela mostra o saldo projetado, os alertas e a tabela das 13 semanas. Também tem um controle por segmento para simular atraso dos clientes e ver na hora onde o caixa fura o mínimo.
+![Página da previsão com o cenário de atraso](docs/pagina.png)
+
+A página mostra o saldo projetado, os alertas e a tabela das 13 semanas. Cada segmento tem um controle para simular atraso dos clientes. A marca vermelha no controle é a folga, o atraso a partir do qual o caixa fura o mínimo. Ao mexer no controle, o gráfico e a tabela se atualizam na hora.
+
+O cenário também pode vir no endereço, para compartilhar: `/?atraso=Hospital público:30`. Quem prefere uma tela sem animação usa `/classica`.
 
 | Rota | O que devolve |
 |---|---|
