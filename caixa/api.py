@@ -1,7 +1,8 @@
 """API da previsão de caixa (FastAPI).
 
     uvicorn caixa.api:app --reload
-    http://127.0.0.1:8000/docs  -> documentação interativa
+    http://127.0.0.1:8000/      -> página com o saldo projetado e os cenários
+    http://127.0.0.1:8000/docs  -> documentação interativa das rotas
 
 A base é lida uma vez, na primeira chamada. Todas as respostas usam valores em reais.
 """
@@ -9,10 +10,13 @@ from __future__ import annotations
 
 from datetime import date
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import backtest
@@ -153,10 +157,21 @@ def _resposta(pv: Previsao) -> RespostaPrevisao:
 
 
 # ------------------------------------------------------------------ rotas
-@app.get("/", summary="O que a API oferece")
-def raiz() -> dict:
+WEB = Path(__file__).parent / "web"
+app.mount("/web", StaticFiles(directory=WEB), name="web")
+
+
+@app.get("/", include_in_schema=False)
+def pagina() -> FileResponse:
+    """Página para quem não quer ler JSON: saldo projetado, cenários e tabela."""
+    return FileResponse(WEB / "index.html")
+
+
+@app.get("/info", summary="O que a API oferece")
+def info() -> dict:
     b = _base()
     return {"empresa": "Grupo Atlas (dados fictícios)", "ultima_data_do_extrato": b.ultima_data.date(),
+            "data_base_minima": (b.receber.emissao.min() + pd.Timedelta(days=365)).date(),
             "segmentos": _segmentos(), "documentacao": "/docs",
             "rotas": ["/previsao", "/cenario", "/folga", "/carteira", "/backtest"]}
 
@@ -180,7 +195,11 @@ def rota_cenario(pedido: PedidoCenario) -> RespostaCenario:
 
 @app.get("/folga", response_model=list[Folga], summary="Quantos dias de atraso cada segmento pode ter")
 def rota_folga(data_base: date | None = None) -> list[Folga]:
-    t = _data(data_base)
+    return _folgas(_data(data_base))
+
+
+@lru_cache(maxsize=32)
+def _folgas(t: pd.Timestamp) -> list[Folga]:
     return [Folga(segmento=s, folga_dias=folga_em_dias(_base(), t, s)) for s in _segmentos()]
 
 

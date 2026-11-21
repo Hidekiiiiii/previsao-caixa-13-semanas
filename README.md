@@ -66,7 +66,7 @@ pip install -r requirements.txt
 python gerador/gerar_dados.py   # opcional: os dados já estão em dados/
 python -m caixa                  # previsão na última data do extrato + backtest + gráficos
 python -m caixa --data-base 2025-06-27 --sem-backtest
-python -m pytest                 # 26 testes
+python -m pytest                 # 27 testes
 ```
 
 A saída `saida/previsao_<data>.xlsx` tem 5 abas:
@@ -82,8 +82,11 @@ A mesma previsão também pode ser consultada por uma API em **FastAPI**. Um sis
 
 ```bash
 uvicorn caixa.api:app
-# documentação interativa em http://127.0.0.1:8000/docs
+# página:        http://127.0.0.1:8000/
+# documentação:  http://127.0.0.1:8000/docs
 ```
+
+A página em `/` usa a própria API. Ela mostra o saldo projetado, os alertas e a tabela das 13 semanas. Também tem um controle por segmento para simular atraso dos clientes e ver na hora onde o caixa fura o mínimo.
 
 | Rota | O que devolve |
 |---|---|
@@ -97,7 +100,7 @@ As entradas são validadas: uma data fora do histórico, um segmento que não ex
 
 ## Testes
 
-Os 26 testes cobrem:
+Os 27 testes cobrem:
 - **Kaplan-Meier:** com e sem faturas em aberto.
 - **Fechamento do fluxo:** saldo inicial + movimentos = saldo final.
 - **Conservação da carteira:** o que entra no horizonte + o que não entra = total em aberto.

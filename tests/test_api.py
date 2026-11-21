@@ -62,3 +62,12 @@ def test_carteira_filtra_e_ordena():
 def test_folga_lista_todos_os_segmentos():
     j = cliente.get("/folga").json()
     assert {f["segmento"] for f in j} == {"Clínica", "Distribuidor", "Hospital privado", "Hospital público"}
+
+
+def test_pagina_e_info():
+    r = cliente.get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "Grupo Atlas" in r.text
+    j = cliente.get("/info").json()
+    assert j["ultima_data_do_extrato"] == "2025-10-31" and j["data_base_minima"] < "2025-01-01"
+    assert cliente.get("/web/fontes/inter-latin-wght.woff2").status_code == 200

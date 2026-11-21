@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Previsão de caixa · Grupo Atlas</title>
+<meta name="description" content="Previsão de caixa de 13 semanas com cenários de atraso de clientes. Dados fictícios.">
+<style>
+@font-face { font-family: "Inter"; src: url("/web/fontes/inter-latin-wght.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/web/fontes/jetbrains-mono-latin-wght.woff2") format("woff2"); font-weight: 100 800; font-display: swap; }
+
+:root {
+  --fundo: #f7f6f3; --cartao: #ffffff; --texto: #1d1d1f; --texto-2: #515154; --texto-3: #6b6b70;
+  --linha: #e4e2dc; --grade: #eeece7; --acento: #2453c9; --acento-claro: #e8eefc;
+  --s1: #2a78d6; --s2: #eb6834; --minimo: #1d1d1f;
+  --critico: #c4314b; --critico-claro: #fbe9ec; --ok: #17804f; --ok-claro: #e5f4ec;
+  --sombra: 0 1px 2px rgba(20,20,30,.04), 0 8px 24px rgba(20,20,30,.06);
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fundo: #111113; --cartao: #1b1b1e; --texto: #f2f2f4; --texto-2: #b9b9bf; --texto-3: #9a9aa2;
+    --linha: #2c2c31; --grade: #26262b; --acento: #8aa8ff; --acento-claro: #1f2740;
+    --s1: #3987e5; --s2: #d95926; --minimo: #f2f2f4;
+    --critico: #ff7a8a; --critico-claro: #3a1d23; --ok: #4cc38a; --ok-claro: #17301f;
+    --sombra: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fundo: #111113; --cartao: #1b1b1e; --texto: #f2f2f4; --texto-2: #b9b9bf; --texto-3: #9a9aa2;
+  --linha: #2c2c31; --grade: #26262b; --acento: #8aa8ff; --acento-claro: #1f2740;
+  --s1: #3987e5; --s2: #d95926; --minimo: #f2f2f4;
+  --critico: #ff7a8a; --critico-claro: #3a1d23; --ok: #4cc38a; --ok-claro: #17301f;
+  --sombra: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font: 400 16px/1.55 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.pagina { max-width: 1180px; margin: 0 auto; padding: 40px 24px 56px; }
+.rotulo { margin: 0 0 8px; color: var(--acento); font: 500 13px/1.4 var(--mono); }
+h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
+.sub { margin: 10px 0 0; color: var(--texto-2); max-width: 680px; }
+.topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.controle-data { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--texto-3); }
+input[type=date] { font: 500 15px var(--mono); color: var(--texto); background: var(--cartao); border: 1px solid var(--linha); border-radius: 10px; padding: 9px 12px; }
+
+.aviso { margin-top: 28px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; border-radius: 14px; font-size: 15px; }
+.aviso svg { flex: none; width: 20px; height: 20px; margin-top: 2px; }
+.aviso.ok { background: var(--ok-claro); color: var(--texto); }
+.aviso.ok svg { color: var(--ok); }
+.aviso.critico { background: var(--critico-claro); color: var(--texto); }
+.aviso.critico svg { color: var(--critico); }
+.aviso b { font-weight: 600; }
+
+.kpis { margin-top: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.kpi { background: var(--cartao); border: 1px solid var(--linha); border-radius: 16px; padding: 16px 18px; box-shadow: var(--sombra); }
+.kpi .nome { font-size: 13px; color: var(--texto-3); }
+.kpi .valor { margin-top: 6px; font: 700 26px/1.1 var(--mono); letter-spacing: -0.04em; }
+.kpi .nota { margin-top: 6px; font-size: 13px; color: var(--texto-2); min-height: 1.4em; }
+
+.grade-principal { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; }
+.cartao { background: var(--cartao); border: 1px solid var(--linha); border-radius: 18px; padding: 20px 22px; box-shadow: var(--sombra); }
+.cartao h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.cartao .explica { margin: 4px 0 0; font-size: 13.5px; color: var(--texto-3); }
+
+.legenda { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--texto-2); }
+.legenda span { display: inline-flex; align-items: center; gap: 7px; }
+.legenda i { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.legenda .tracejado { border-top-style: dashed; }
+.cartao-grafico { display: flex; flex-direction: column; }
+.grafico { position: relative; margin-top: 8px; flex: 1; min-height: 320px; }
+.grafico svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.grafico text { font: 12px Inter, sans-serif; fill: var(--texto-3); }
+.grafico .rotulo-serie { font-size: 12.5px; fill: var(--texto-2); font-weight: 500; }
+.dica { position: absolute; pointer-events: none; background: var(--cartao); border: 1px solid var(--linha); border-radius: 10px; box-shadow: var(--sombra); padding: 9px 12px; font-size: 13px; min-width: 190px; opacity: 0; transition: opacity .12s; }
+.dica .t { font-weight: 600; margin-bottom: 4px; }
+.dica .l { display: flex; justify-content: space-between; gap: 14px; color: var(--texto-2); }
+.dica .l b { font: 600 13px var(--mono); color: var(--texto); }
+.dica .marca { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+.segmento { padding: 14px 0; border-top: 1px solid var(--linha); }
+.segmento:first-of-type { margin-top: 14px; }
+.seg-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.seg-nome { font-weight: 500; font-size: 15px; }
+.seg-valor { font: 600 14px var(--mono); color: var(--texto); }
+.seg-folga { font-size: 12.5px; color: var(--texto-3); margin-top: 2px; }
+.seg-folga.passou { color: var(--critico); font-weight: 500; }
+input[type=range] { width: 100%; margin: 10px 0 0; accent-color: var(--s2); }
+.zerar { margin-top: 14px; width: 100%; font: 500 14px Inter, sans-serif; color: var(--texto); background: transparent; border: 1px solid var(--linha); border-radius: 10px; padding: 9px; cursor: pointer; }
+.zerar:hover { border-color: var(--texto-3); }
+.zerar:disabled { opacity: .45; cursor: default; }
+
+.tabela-cartao { margin-top: 14px; }
+.rolagem { overflow-x: auto; margin: 14px -22px 0; padding: 0 22px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 980px; }
+th, td { padding: 7px 8px; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--cartao); }
+thead th { font-weight: 500; color: var(--texto-3); border-bottom: 1px solid var(--linha); vertical-align: bottom; }
+thead th small { display: block; font: 400 11.5px var(--mono); }
+td { font-family: var(--mono); color: var(--texto-2); }
+td:first-child { font-family: Inter, sans-serif; color: var(--texto); }
+tr.total td { font-weight: 600; color: var(--texto); border-top: 1px solid var(--linha); }
+td.baixo { color: var(--critico); background: var(--critico-claro); }
+td.zero { color: var(--texto-3); }
+
+.rodape { margin-top: 28px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--texto-3); }
+.rodape a { color: var(--acento); text-decoration: none; }
+.rodape a:hover { text-decoration: underline; }
+.carregando { opacity: .55; transition: opacity .2s; }
+
+@media (max-width: 920px) {
+  .grade-principal { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .pagina { padding: 28px 16px 40px; }
+  .kpi .valor { font-size: 21px; }
+  .cartao { padding: 18px 16px; }
+  .rolagem { margin: 14px -16px 0; padding: 0 16px; }
+  .grafico { min-height: 280px; }
+}
+</style>
+</head>
+<body>
+<main class="pagina">
+  <header class="topo">
+    <div>
+      <p class="rotulo">// previsão de caixa · 13 semanas</p>
+      <h1>Grupo Atlas</h1>
+      <p class="sub">Quanto vai ter no banco em cada semana e quantos dias de atraso dos clientes o caixa aguenta. Dados fictícios.</p>
+    </div>
+    <label class="controle-data">Data-base
+      <input type="date" id="data-base">
+    </label>
+  </header>
+
+  <div class="aviso" id="aviso" role="status" hidden></div>
+
+  <section class="kpis" aria-label="Resumo">
+    <div class="kpi"><div class="nome">Saldo na data-base</div><div class="valor" id="k-saldo">–</div><div class="nota" id="k-saldo-n"></div></div>
+    <div class="kpi"><div class="nome">Menor saldo previsto</div><div class="valor" id="k-menor">–</div><div class="nota" id="k-menor-n"></div></div>
+    <div class="kpi"><div class="nome">Saldo na semana 13</div><div class="valor" id="k-final">–</div><div class="nota" id="k-final-n"></div></div>
+    <div class="kpi"><div class="nome">Carteira que não entra em 13 semanas</div><div class="valor" id="k-fora">–</div><div class="nota">vencida há muito ou perda provável</div></div>
+  </section>
+
+  <section class="grade-principal">
+    <div class="cartao cartao-grafico">
+      <h2>Saldo no fim de cada semana</h2>
+      <p class="explica">Passe o mouse sobre o gráfico para ver os valores. A linha tracejada é o caixa mínimo.</p>
+      <div class="legenda" id="legenda"></div>
+      <div class="grafico" id="grafico">
+        <svg id="svg" role="img" aria-label="Saldo projetado por semana"></svg>
+        <div class="dica" id="dica"></div>
+      </div>
+    </div>
+
+    <aside class="cartao">
+      <h2>E se os clientes atrasarem?</h2>
+      <p class="explica">Dias de atraso a mais, por segmento, sobre o comportamento atual.</p>
+      <div id="segmentos"></div>
+      <button class="zerar" id="zerar" type="button" disabled>Voltar ao cenário base</button>
+    </aside>
+  </section>
+
+  <section class="cartao tabela-cartao">
+    <h2 id="titulo-tabela">Fluxo por semana</h2>
+    <p class="explica">Valores em R$ mil. Saldos abaixo do mínimo aparecem destacados.</p>
+    <div class="rolagem"><table id="tabela"></table></div>
+  </section>
+
+  <footer class="rodape">
+    <span>Método direto com curvas de recebimento por segmento. Dados fictícios, gerados por script.</span>
+    <span><a href="/docs">Documentação da API</a> · <a href="/previsao">JSON da previsão</a></span>
+  </footer>
+</main>
+
+<script>
+const fmt = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtMil = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+const mi = v => `R$ ${fmt.format(v / 1e6)} mi`;
+const dataBR = s => s.split("-").reverse().slice(0, 2).join("/");
+const $ = s => document.querySelector(s);
+
+const estado = { info: null, folga: {}, atraso: {}, base: null, cenario: null, pedido: 0 };
+
+async function pegar(url, opcoes) {
+  const r = await fetch(url, opcoes);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+
+function ativo() { return Object.values(estado.atraso).some(d => d > 0); }
+
+async function carregar() {
+  const n = ++estado.pedido;
+  const data = $("#data-base").value;
+  document.body.classList.add("carregando");
+  try {
+    if (ativo()) {
+      const atraso = Object.fromEntries(Object.entries(estado.atraso).filter(([, d]) => d > 0));
+      const r = await pegar("/cenario", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ data_base: data, atraso_extra: atraso }) });
+      if (n !== estado.pedido) return;
+      estado.base = r.base; estado.cenario = r.cenario;
+    } else {
+      const r = await pegar(`/previsao?data_base=${data}`);
+      if (n !== estado.pedido) return;
+      estado.base = r; estado.cenario = null;
+    }
+    desenhar();
+  } catch (e) {
+    mostrarAviso("critico", `<b>Não foi possível calcular:</b> ${e.message}`);
+  } finally {
+    if (n === estado.pedido) document.body.classList.remove("carregando");
+  }
+}
+
+async function carregarFolga() {
+  const data = $("#data-base").value;
+  estado.folga = {};
+  desenharSegmentos();
+  try {
+    const f = await pegar(`/folga?data_base=${data}`);
+    if (data !== $("#data-base").value) return;
+    f.forEach(x => estado.folga[x.segmento] = x.folga_dias);
+  } catch (e) { /* a folga é complementar; o resto da página continua */ }
+  desenharSegmentos();
+}
+
+function mostrarAviso(tipo, html) {
+  const icone = tipo === "ok"
+    ? '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm-1.1 12.2L5.2 10l1.3-1.3 2.4 2.4 4.6-4.6 1.3 1.3-5.9 5.9Z"/></svg>'
+    : '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1.5 .8 17.5h18.4L10 1.5Zm-.9 5.5h1.8v5.2H9.1V7Zm0 6.6h1.8v1.8H9.1v-1.8Z"/></svg>';
+  const a = $("#aviso");
+  a.className = `aviso ${tipo}`;
+  a.innerHTML = icone + `<div>${html}</div>`;
+  a.hidden = false;
+}
+
+function desenhar() {
+  const p = estado.cenario || estado.base;
+  const min = p.saldo_minimo;
+  const s13 = p.semanas[12];
+  const menor = p.semanas[p.semana_do_menor_saldo - 1];
+  $("#k-saldo").textContent = mi(p.saldo_atual);
+  $("#k-saldo-n").textContent = `em ${p.data_base.split("-").reverse().join("/")}`;
+  $("#k-menor").textContent = mi(p.menor_saldo);
+  $("#k-menor-n").textContent = `semana ${menor.semana}, de ${dataBR(menor.inicio)} a ${dataBR(menor.fim)}`;
+  $("#k-final").textContent = mi(s13.saldo_final);
+  $("#k-final-n").textContent = estado.cenario
+    ? `${mi(s13.saldo_final - estado.base.semanas[12].saldo_final).replace("R$ -", "−R$ ")} contra o cenário base`
+    : `até ${dataBR(s13.fim)}`;
+  $("#k-fora").textContent = mi(p.carteira_nao_recebida_no_horizonte);
+
+  if (p.alertas.length) {
+    const a = p.alertas[0], pior = Math.max(...p.alertas.map(x => x.falta_para_minimo));
+    mostrarAviso("critico", `<b>O caixa fica abaixo do mínimo de ${mi(min)} em ${p.alertas.length} semana${p.alertas.length > 1 ? "s" : ""}</b>, a primeira começando em ${dataBR(a.inicio)}. No pior momento, faltam ${mi(pior)}.`);
+  } else {
+    mostrarAviso("ok", `<b>O caixa fica acima do mínimo de ${mi(min)} nas 13 semanas.</b> O ponto mais baixo é ${mi(p.menor_saldo)}, na semana que começa em ${dataBR(menor.inicio)}.`);
+  }
+  $("#zerar").disabled = !ativo();
+  desenharGrafico();
+  desenharTabela(p);
+  desenharSegmentos();
+}
+
+function cor(nome) { return getComputedStyle(document.documentElement).getPropertyValue(nome).trim(); }
+
+function desenharGrafico() {
+  const svg = $("#svg"), b = estado.base, c = estado.cenario;
+  const L = svg.clientWidth || 700, A = svg.clientHeight || 340;
+  const m = { e: 44, d: L < 520 ? 16 : 118, t: 16, b: 30 };
+  const pontos = p => [{ x: 0, y: p.saldo_atual, s: null }, ...p.semanas.map(s => ({ x: s.semana, y: s.saldo_final, s }))];
+  const series = [{ nome: "Previsão", p: b, cor: "--s1" }];
+  if (c) series.push({ nome: "Com atraso", p: c, cor: "--s2" });
+  const todos = series.flatMap(s => pontos(s.p).map(q => q.y)).concat([b.saldo_minimo]);
+  const yMax = Math.max(...todos) * 1.12, yMin = Math.min(0, Math.min(...todos) * 1.1);
+  const X = x => m.e + (x / 13) * (L - m.e - m.d);
+  const Y = y => m.t + (1 - (y - yMin) / (yMax - yMin)) * (A - m.t - m.b);
+  const passo = yMax > 16e6 ? 4e6 : 2e6;
+  let h = "";
+  for (let v = 0; v <= yMax; v += passo) {
+    h += `<line x1="${m.e}" x2="${L - m.d}" y1="${Y(v)}" y2="${Y(v)}" stroke="${cor("--grade")}"/>`;
+    h += `<text x="${m.e - 8}" y="${Y(v) + 4}" text-anchor="end">${v / 1e6}</text>`;
+  }
+  h += `<text x="${m.e - 8}" y="${m.t - 4}" text-anchor="end">R$ mi</text>`;
+  const rot = L < 520 ? [0, 4, 8, 12] : [0, 2, 4, 6, 8, 10, 12];
+  rot.forEach(i => {
+    const d = i === 0 ? b.data_base : b.semanas[i - 1].fim;
+    h += `<text x="${X(i)}" y="${A - 8}" text-anchor="middle">${i === 0 ? "hoje" : dataBR(d)}</text>`;
+  });
+  h += `<line x1="${m.e}" x2="${L - m.d}" y1="${Y(b.saldo_minimo)}" y2="${Y(b.saldo_minimo)}" stroke="${cor("--minimo")}" stroke-width="1" stroke-dasharray="5 4" opacity=".7"/>`;
+  if (L >= 520) h += `<text class="rotulo-serie" x="${L - m.d + 8}" y="${Y(b.saldo_minimo) + 4}">Mínimo</text>`;
+  const fim = [];
+  series.forEach(s => {
+    const pts = pontos(s.p), k = cor(s.cor);
+    h += `<polyline fill="none" stroke="${k}" stroke-width="2" stroke-linejoin="round" points="${pts.map(q => `${X(q.x)},${Y(q.y)}`).join(" ")}"/>`;
+    pts.forEach(q => {
+      const baixo = q.y < b.saldo_minimo;
+      h += `<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="4.5" fill="${baixo ? cor("--cartao") : k}" stroke="${baixo ? k : cor("--cartao")}" stroke-width="2"/>`;
+    });
+    fim.push({ y: Y(pts[13].y), nome: s.nome });
+  });
+  if (L >= 520) {
+    fim.sort((a, b) => a.y - b.y);
+    if (fim.length === 2 && fim[1].y - fim[0].y < 16) { fim[0].y -= 8; fim[1].y += 8; }
+    fim.forEach(f => h += `<text class="rotulo-serie" x="${L - m.d + 8}" y="${f.y + 4}">${f.nome}</text>`);
+  }
+  h += `<line id="mira" y1="${m.t}" y2="${A - m.b}" stroke="${cor("--texto-3")}" stroke-width="1" opacity="0"/>`;
+  h += `<rect id="alvo" x="${m.e}" y="0" width="${L - m.e - m.d}" height="${A}" fill="transparent"/>`;
+  svg.setAttribute("viewBox", `0 0 ${L} ${A}`);
+  svg.innerHTML = h;
+
+  $("#legenda").innerHTML = series.map(s => `<span><i style="border-color:${cor(s.cor)}"></i>${s.nome}</span>`).join("")
+    + `<span><i class="tracejado" style="border-color:${cor("--minimo")}"></i>Caixa mínimo</span>`;
+
+  const dica = $("#dica"), mira = $("#mira");
+  const mover = ev => {
+    const r = svg.getBoundingClientRect();
+    const cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+    const i = Math.max(0, Math.min(13, Math.round((cx - m.e) / (L - m.e - m.d) * 13)));
+    mira.setAttribute("x1", X(i)); mira.setAttribute("x2", X(i)); mira.setAttribute("opacity", ".5");
+    const titulo = i === 0 ? `Hoje, ${dataBR(b.data_base)}` : `Semana ${i} · ${dataBR(b.semanas[i - 1].inicio)} a ${dataBR(b.semanas[i - 1].fim)}`;
+    dica.innerHTML = `<div class="t">${titulo}</div>` + series.map(s => {
+      const v = i === 0 ? s.p.saldo_atual : s.p.semanas[i - 1].saldo_final;
+      return `<div class="l"><span><span class="marca" style="background:${cor(s.cor)}"></span>${s.nome}</span><b>${mi(v)}</b></div>`;
+    }).join("");
+    const esq = X(i) + 14 + 200 > L ? X(i) - 214 : X(i) + 14;
+    dica.style.left = `${esq}px`; dica.style.top = "10px"; dica.style.opacity = 1;
+  };
+  const sair = () => { dica.style.opacity = 0; mira.setAttribute("opacity", "0"); };
+  const alvo = $("#alvo");
+  alvo.addEventListener("mousemove", mover); alvo.addEventListener("touchmove", mover, { passive: true });
+  alvo.addEventListener("mouseleave", sair); alvo.addEventListener("touchend", sair);
+}
+
+function desenharTabela(p) {
+  $("#titulo-tabela").textContent = estado.cenario ? "Fluxo por semana, com o atraso simulado" : "Fluxo por semana";
+  const linhas = Object.keys(p.semanas[0].linhas).filter(l => p.semanas.some(s => Math.abs(s.linhas[l]) >= 1));
+  const ordem = ["Recebimentos – carteira", "Recebimentos – vendas futuras", "Fornecedores – títulos em aberto",
+                 "Fornecedores – compras futuras", "Folha", "Encargos", "13º salário", "Impostos",
+                 "Aluguel e serviços", "Empréstimo", "Despesas diversas"];
+  linhas.sort((a, b) => (ordem.indexOf(a) + 99) % 99 - (ordem.indexOf(b) + 99) % 99);
+  const mil = v => Math.abs(v) < 500 ? "–" : fmtMil.format(v / 1e3);
+  let h = "<thead><tr><th>R$ mil</th>" + p.semanas.map(s => `<th>S${s.semana}<small>${dataBR(s.inicio)}</small></th>`).join("") + "</tr></thead><tbody>";
+  h += `<tr class="total"><td>Saldo inicial</td>${p.semanas.map(s => `<td>${mil(s.saldo_inicial)}</td>`).join("")}</tr>`;
+  linhas.forEach(l => {
+    h += `<tr><td>${l}</td>${p.semanas.map(s => `<td class="${Math.abs(s.linhas[l]) < 500 ? "zero" : ""}">${mil(s.linhas[l])}</td>`).join("")}</tr>`;
+  });
+  h += `<tr class="total"><td>Fluxo líquido</td>${p.semanas.map(s => `<td>${mil(s.fluxo_liquido)}</td>`).join("")}</tr>`;
+  h += `<tr class="total"><td>Saldo final</td>${p.semanas.map(s => `<td class="${s.abaixo_do_minimo ? "baixo" : ""}">${mil(s.saldo_final)}</td>`).join("")}</tr></tbody>`;
+  $("#tabela").innerHTML = h;
+}
+
+function desenharSegmentos() {
+  const caixa = $("#segmentos");
+  const segs = estado.info ? estado.info.segmentos : [];
+  if (!caixa.children.length && segs.length) {
+    caixa.innerHTML = segs.map(s => `
+      <div class="segmento" data-seg="${s}">
+        <div class="seg-topo"><span class="seg-nome">${s}</span><span class="seg-valor">+0 dias</span></div>
+        <div class="seg-folga">calculando a folga…</div>
+        <input type="range" min="0" max="60" step="1" value="0" aria-label="Dias de atraso a mais: ${s}">
+      </div>`).join("");
+    caixa.querySelectorAll(".segmento").forEach(el => {
+      const inp = el.querySelector("input"), seg = el.dataset.seg;
+      let espera;
+      inp.addEventListener("input", () => {
+        estado.atraso[seg] = +inp.value;
+        desenharSegmentos();
+        clearTimeout(espera); espera = setTimeout(carregar, 180);
+      });
+    });
+  }
+  caixa.querySelectorAll(".segmento").forEach(el => {
+    const seg = el.dataset.seg, d = estado.atraso[seg] || 0, f = estado.folga[seg];
+    el.querySelector(".seg-valor").textContent = `+${d} dia${d === 1 ? "" : "s"}`;
+    el.querySelector("input").value = d;
+    const t = el.querySelector(".seg-folga");
+    t.classList.toggle("passou", f != null && d > f);
+    t.textContent = f === undefined ? "calculando a folga…"
+      : f === null ? "o caixa já fica abaixo do mínimo sem atraso extra"
+      : f >= 120 ? "sozinho, não faz o caixa furar o mínimo"
+      : d > f ? `passou da folga: o caixa aguenta até +${f} dias`
+      : `o caixa aguenta até +${f} dias`;
+  });
+}
+
+$("#zerar").addEventListener("click", () => { estado.atraso = {}; carregar(); });
+$("#data-base").addEventListener("change", () => { carregar(); carregarFolga(); });
+let redim;
+window.addEventListener("resize", () => { clearTimeout(redim); redim = setTimeout(() => estado.base && desenharGrafico(), 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => estado.base && desenhar());
+
+(async () => {
+  estado.info = await pegar("/info");
+  const d = $("#data-base");
+  d.min = estado.info.data_base_minima; d.max = estado.info.ultima_data_do_extrato; d.value = d.max;
+  desenharSegmentos();
+  await carregar();
+  carregarFolga();
+})();
+</script>
+</body>
+</html>
