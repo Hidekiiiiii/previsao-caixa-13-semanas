@@ -1,3 +1,7 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+
+# Saídas geradas em outras datas-base não entram no repositório (só o exemplo de 31/10/2025)
+saida/previsao_*.xlsx
+!saida/previsao_2025-10-31.xlsx
