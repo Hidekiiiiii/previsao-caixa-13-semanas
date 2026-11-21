@@ -1,6 +1,6 @@
 # Previsão de caixa de 13 semanas
 
-Previsão de caixa semanal pelo **método direto**, em Python. Cada linha do fluxo vem de uma fonte que o controller reconhece: as faturas em aberto, as vendas previstas, os títulos de fornecedores e o calendário da folha e dos impostos. O projeto testa a previsão contra o passado (**backtest**) e responde quantos dias de atraso dos clientes o caixa aguenta antes de furar o mínimo.
+Previsão de caixa semanal pelo **método direto**, em Python, com API em FastAPI. Cada linha do fluxo vem de uma fonte que o controller reconhece: as faturas em aberto, as vendas previstas, os títulos de fornecedores e o calendário da folha e dos impostos. O projeto testa a previsão contra o passado (**backtest**) e responde quantos dias de atraso dos clientes o caixa aguenta antes de furar o mínimo.
 
 > **Aviso:** o Grupo Atlas e todos os dados são fictícios, gerados por script com semente fixa (a mesma empresa do projeto de [fechamento mensal](https://github.com/Hidekiiiiii/fechamento-mensal-python)). Nenhum dado real foi usado.
 
@@ -66,7 +66,7 @@ pip install -r requirements.txt
 python gerador/gerar_dados.py   # opcional: os dados já estão em dados/
 python -m caixa                  # previsão na última data do extrato + backtest + gráficos
 python -m caixa --data-base 2025-06-27 --sem-backtest
-python -m pytest                 # 15 testes
+python -m pytest                 # 26 testes
 ```
 
 A saída `saida/previsao_<data>.xlsx` tem 5 abas:
@@ -76,9 +76,28 @@ A saída `saida/previsao_<data>.xlsx` tem 5 abas:
 - **Backtest.**
 - **Premissas.**
 
+## API
+
+A mesma previsão também pode ser consultada por uma API em **FastAPI**. Um sistema de tesouraria ou um painel poderia consumi-la sem abrir a planilha.
+
+```bash
+uvicorn caixa.api:app
+# documentação interativa em http://127.0.0.1:8000/docs
+```
+
+| Rota | O que devolve |
+|---|---|
+| `GET /previsao?data_base=2025-10-31` | As 13 semanas linha a linha, o menor saldo e os alertas. `metodo=vencimento` devolve a versão "planilha". |
+| `POST /cenario` com `{"atraso_extra": {"Hospital público": 30}}` | O cenário base e o simulado lado a lado, com a diferença no menor saldo. |
+| `GET /folga` | Dias de atraso adicional que cada segmento pode ter antes de o caixa furar o mínimo. |
+| `GET /carteira?segmento=Clínica&vencidas_ha_mais_de=90` | Faturas em aberto, com quanto deve entrar de cada uma no horizonte. |
+| `GET /backtest` | O erro de cada método no passado. |
+
+As entradas são validadas: uma data fora do histórico, um segmento que não existe ou um atraso negativo devolvem erro 422 com a explicação.
+
 ## Testes
 
-Os 15 testes cobrem:
+Os 26 testes cobrem:
 - **Kaplan-Meier:** com e sem faturas em aberto.
 - **Fechamento do fluxo:** saldo inicial + movimentos = saldo final.
 - **Conservação da carteira:** o que entra no horizonte + o que não entra = total em aberto.
@@ -86,6 +105,7 @@ Os 15 testes cobrem:
 - **Método da planilha.**
 - **Cenários:** mais atraso nunca melhora o caixa, e a folga calculada é o limite exato.
 - **Backtest:** o realizado bate com o extrato.
+- **API:** as respostas batem com o motor, e as entradas inválidas são recusadas.
 
 Um teste garante que a previsão **não usa nada posterior à data-base**: ele apaga tudo o que aconteceu depois dela e exige uma previsão idêntica. Sem isso, o backtest não valeria nada. Para conferir que o teste funciona, ele foi rodado contra uma versão do código com esse vazamento, e falhou como deveria.
 
